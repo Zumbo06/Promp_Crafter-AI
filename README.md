@@ -26,7 +26,7 @@ PromptCrafter AI is a sophisticated desktop application built with Python and Py
 
 1.  **Clone the Repository:**
     ```bash
-    git clone https://github.com/YOUR_USERNAME/PromptCraftAI.git # Replace with your actual repo URL
+    git clone https://github.com/Zumbo06/Promp_Crafter-AI.git 
     cd PromptCraftAI
     ```
 
