@@ -1,4 +1,4 @@
-PromptCraft AI is a sophisticated desktop application built with Python and PyQt6, designed to help users generate high-quality, detailed prompts for various AI models, including image and video generators. Powered by Google's Gemini AI, PromptCraft AI provides an intuitive interface for both basic and advanced prompt engineering, as well as the ability to generate prompts from uploaded images.
+PromptCrafter AI is a sophisticated desktop application built with Python and PyQt6, designed to help users generate high-quality, detailed prompts for various AI models, including image and video generators. Powered by Google's Gemini AI, PromptCraft AI provides an intuitive interface for both basic and advanced prompt engineering, as well as the ability to generate prompts from uploaded images.
 
 
 
