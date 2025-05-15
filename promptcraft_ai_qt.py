@@ -16,8 +16,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QGuiApplication, QPixmap, QImage, QAction, QActionGroup,QIcon
 from PyQt6.QtCore import Qt, QSize, QThread, QObject, pyqtSignal, QTimer
 
-# --- Configuration & Gemini Setup (NO CHANGES from your last provided setup) ---
-# ... (Keep your corrected Gemini setup from the previous step) ...
+# --- Configuration & Gemini Setup ---
+
 GEMINI_API_KEY_VALID = False
 text_model = None
 vision_model = None
@@ -80,8 +80,7 @@ LIBRARY_FILE = "prompt_library.json"
 num_variations_for_worker = 1
 
 # --- Stylesheets ---
-# (Keep your DARK_CYBORG_STYLESHEET and LIGHT_FUSION_STYLESHEET)
-# Add styling for QTextBrowser if needed (it usually inherits well from QTextEdit)
+
 DARK_CYBORG_STYLESHEET = """
     /* ... (previous styles including QComboBox) ... */
     QTextBrowser { /* Similar to QTextEdit */
@@ -243,7 +242,7 @@ LIGHT_FUSION_STYLESHEET = """
     }
 """
 
-# --- GeminiWorker Class (NO CHANGES from Phase 9c) ---
+
 class GeminiWorker(QObject):
     result_ready = pyqtSignal(list)
     error_occurred = pyqtSignal(str)
@@ -368,7 +367,7 @@ class GeminiWorker(QObject):
 
 # --- Main Application Class ---
 class PromptCraftAI_Qt(QMainWindow):
-    def __init__(self): # (NO CHANGES from Phase 9c)
+    def __init__(self): 
         super().__init__()
         self.current_theme_name = "Dark Cyborg"
         self.setWindowTitle(f"{APP_NAME} - {APP_VERSION}")
@@ -386,7 +385,7 @@ class PromptCraftAI_Qt(QMainWindow):
         self.MAX_VARIATIONS = 10
 
         self._create_menus()
-        self._init_ui() # This will now call the updated _create_help_tab
+        self._init_ui() 
         self.statusBar().showMessage("Ready", 3000)
         self._apply_theme(self.current_theme_name)
 
@@ -406,7 +405,7 @@ class PromptCraftAI_Qt(QMainWindow):
                                      "Image-to-Prompt feature will be disabled.\n"
                                      f"Error details from setup (if any): {ERROR_MSG if 'Vision model init failed' in ERROR_MSG else 'Unknown vision model issue.'}")
 
-    def _create_menus(self): # (NO CHANGES)
+    def _create_menus(self): 
         menubar = self.menuBar()
         settings_menu = menubar.addMenu("&Settings")
         theme_menu = settings_menu.addMenu("&Theme")
@@ -423,7 +422,7 @@ class PromptCraftAI_Qt(QMainWindow):
         exit_action = QAction("&Exit", self); exit_action.setShortcut("Ctrl+Q"); exit_action.triggered.connect(self.close)
         settings_menu.addAction(exit_action)
 
-    def _apply_theme(self, theme_name): # (NO CHANGES)
+    def _apply_theme(self, theme_name): 
         if theme_name == "Dark Cyborg": QApplication.instance().setStyleSheet(DARK_CYBORG_STYLESHEET)
         elif theme_name == "Light Fusion": QApplication.instance().setStyleSheet(LIGHT_FUSION_STYLESHEET)
         else: QApplication.instance().setStyleSheet(DARK_CYBORG_STYLESHEET); theme_name = "Dark Cyborg"
@@ -432,10 +431,10 @@ class PromptCraftAI_Qt(QMainWindow):
         QTimer.singleShot(3000, lambda: self.statusBar().showMessage("Ready.", 2000))
         for action in self.theme_action_group.actions(): action.setChecked(action.text().startswith(theme_name))
 
-    def _create_header_label(self, text): # (NO CHANGES)
+    def _create_header_label(self, text):
         label = QLabel(text); label.setProperty("isHeader", True); return label
 
-    def _init_ui(self): # MODIFIED: Add Help Tab
+    def _init_ui(self): 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.main_layout = QVBoxLayout(self.central_widget)
@@ -450,16 +449,16 @@ class PromptCraftAI_Qt(QMainWindow):
         self.video_tab_widget = self._create_video_tab()
         self.image_prompt_tab_widget = self._create_image_prompt_tab()
         self.library_tab_widget = self._create_library_tab()
-        self.help_tab_widget = self._create_help_tab() # <--- NEW HELP TAB UI
+        self.help_tab_widget = self._create_help_tab() 
 
         self.tab_widget.addTab(self.basic_tab_widget, "✍️ Basic")
         self.tab_widget.addTab(self.advanced_img_tab_widget, "🖼️ Image Prompt (Advanced)")
         self.tab_widget.addTab(self.video_tab_widget, "🎬 Video Prompt")
         self.tab_widget.addTab(self.image_prompt_tab_widget, "🖼️ Image to Prompt")
         self.tab_widget.addTab(self.library_tab_widget, "📚 Library")
-        self.tab_widget.addTab(self.help_tab_widget, "❓ Help / Guide") # <--- ADDED HELP TAB
+        self.tab_widget.addTab(self.help_tab_widget, "❓ Help / Guide") #Help Tab
 
-        # ... (rest of _init_ui for output area is unchanged) ...
+      
         output_group = QWidget()
         output_layout = QVBoxLayout(output_group)
         output_layout.setContentsMargins(0,5,0,0)
@@ -497,10 +496,8 @@ class PromptCraftAI_Qt(QMainWindow):
         self.setStatusBar(QStatusBar(self))
 
 
-    # _create_basic_tab, _create_advanced_image_tab, _create_video_tab,
-    # _create_image_prompt_tab, _create_library_tab (NO CHANGES from previous versions)
-    # ...
-    def _create_basic_tab(self): # (NO CHANGES from Phase 9c)
+
+    def _create_basic_tab(self):
         tab_widget = QWidget()
         layout = QVBoxLayout(tab_widget)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -601,7 +598,7 @@ class PromptCraftAI_Qt(QMainWindow):
         self.adv_img_style_combo.lineEdit().setPlaceholderText("Select or type a primary style...")
         adv_form_layout.addRow(QLabel("Primary Artistic Style:"), self.adv_img_style_combo)
 
-        # --- NEW: Secondary Style / Modifier ComboBox ---
+        # --- Secondary Style / Modifier ComboBox ---
         self.adv_img_secondary_style_combo = QComboBox()
         self.adv_img_secondary_style_combo.setEditable(True)
         self.adv_img_secondary_style_combo.setToolTip("Optional: Select or type a secondary style or modifier to combine.")
@@ -624,7 +621,7 @@ class PromptCraftAI_Qt(QMainWindow):
         self.adv_img_secondary_style_combo.addItems(secondary_style_modifier_presets)
         self.adv_img_secondary_style_combo.lineEdit().setPlaceholderText("Select or type a style modifier...")
         adv_form_layout.addRow(QLabel("Secondary Style/Modifier:"), self.adv_img_secondary_style_combo)
-        # --- END NEW Secondary Style ---
+        
 
         self.adv_img_character_details = QTextEdit()
         self.adv_img_character_details.setPlaceholderText("Appearance, clothing, pose, species, expression...")
@@ -726,7 +723,7 @@ class PromptCraftAI_Qt(QMainWindow):
         scroll_area.setWidget(content_widget)
         return scroll_area
 
-    def _create_video_tab(self): # (NO CHANGES from Phase 9b)
+    def _create_video_tab(self): 
         scroll_area = QScrollArea(); scroll_area.setWidgetResizable(True)
         content_widget = QWidget(); layout = QVBoxLayout(content_widget)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop); layout.setContentsMargins(15,15,15,15); layout.setSpacing(12)
@@ -798,7 +795,7 @@ class PromptCraftAI_Qt(QMainWindow):
         scroll_area.setWidget(content_widget)
         return scroll_area
 
-    def _create_image_prompt_tab(self): # (NO CHANGES from Phase 8 with image-to-video option)
+    def _create_image_prompt_tab(self): 
         tab_widget = QWidget()
         layout = QVBoxLayout(tab_widget)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -853,7 +850,7 @@ class PromptCraftAI_Qt(QMainWindow):
         layout.addStretch(1)
         return tab_widget
 
-    def _create_library_tab(self): # (NO CHANGES from Phase 8)
+    def _create_library_tab(self): 
         tab_widget = QWidget(); main_layout = QVBoxLayout(tab_widget)
         main_layout.setAlignment(Qt.AlignmentFlag.AlignTop); main_layout.setContentsMargins(15,15,15,15); main_layout.setSpacing(10)
         main_layout.addWidget(self._create_header_label("Prompt Library"))
@@ -877,7 +874,7 @@ class PromptCraftAI_Qt(QMainWindow):
         main_layout.addWidget(buttons_container)
         return tab_widget
 
-    # +++ NEW METHOD for Phase 10: Help Tab +++
+    # +++ Help Tab +++
     def _create_help_tab(self):
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
@@ -994,10 +991,7 @@ class PromptCraftAI_Qt(QMainWindow):
         return scroll_area
 
 
-    # --- Helper & Action Methods (NO CHANGES to most from Phase 9c) ---
-    # _display_output, _clear_output, _copy_prompt, _set_ui_for_generation,
-    # _upload_image_qt, _reset_image_preview, basic variation counters
-    # ... (Keep these methods as they were) ...
+
     def _display_output(self, prompt_text, is_batch_result=False):
         if is_batch_result:
             current_text = self.output_text_edit.toPlainText()
@@ -1079,7 +1073,7 @@ class PromptCraftAI_Qt(QMainWindow):
             self.basic_batch_count += 1
             self._update_basic_variation_display()
 
-    # Library Methods (_load_library to closeEvent - NO CHANGES)
+    # Library Methods (_load_library to closeEvent )
     def _load_library(self):
         if os.path.exists(LIBRARY_FILE):
             try:
@@ -1235,7 +1229,7 @@ class PromptCraftAI_Qt(QMainWindow):
         components = {
             "Core Idea/Subject": self.adv_img_core_idea.toPlainText().strip(),
             "Primary Artistic Style": self.adv_img_style_combo.currentText().strip(),
-            "Secondary Style/Modifier": self.adv_img_secondary_style_combo.currentText().strip(), # <--- NEWLY ADDED
+            "Secondary Style/Modifier": self.adv_img_secondary_style_combo.currentText().strip(), 
             "Character Details": self.adv_img_character_details.toPlainText().strip(),
             "Scene & Environment": self.adv_img_scene_environment.toPlainText().strip(),
             "Artistic Influence": self.adv_img_artistic_influence.text().strip(),
@@ -1359,7 +1353,7 @@ class PromptCraftAI_Qt(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    # +++ NEW: Set Application Icon (Logo) +++
+
     # Define the path to your icon file
     icon_path = "icons/promptcraft_logo.png" # Assuming it's in the same directory as the script
                                       # Or use a relative path like "icons/promptcraft_logo.png"
@@ -1371,12 +1365,10 @@ if __name__ == "__main__":
         print(f"Application icon set from: {icon_path}")
     else:
         print(f"Warning: Application icon file not found at '{icon_path}'. Using default system icon.")
-    # +++ END NEW +++
+ 
 
 
-    # Stylesheet will be applied by _apply_theme in __init__ of PromptCraftAI_Qt
-    # If you want a default theme set before the window is even created (though _apply_theme does it early):
-    # app.setStyleSheet(DARK_CYBORG_STYLESHEET) # Example
+
 
     main_window = PromptCraftAI_Qt()
     main_window.show()
