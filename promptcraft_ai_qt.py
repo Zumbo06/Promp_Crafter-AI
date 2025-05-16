@@ -2,6 +2,7 @@ import sys
 import os
 import json
 import traceback
+import datetime
 from dotenv import load_dotenv
 import google.generativeai as genai
 from PIL import Image, UnidentifiedImageError
@@ -11,13 +12,12 @@ from PyQt6.QtWidgets import (
     QTabWidget, QLabel, QTextEdit, QLineEdit, QPushButton, QScrollArea,
     QFileDialog, QMessageBox, QStatusBar, QSpacerItem, QSizePolicy,
     QListWidget, QListWidgetItem, QInputDialog, QSpinBox, QMenuBar,
-    QRadioButton, QButtonGroup, QComboBox, QTextBrowser # <--- Added QTextBrowser
+    QRadioButton, QButtonGroup, QComboBox, QTextBrowser 
 )
 from PyQt6.QtGui import QGuiApplication, QPixmap, QImage, QAction, QActionGroup,QIcon
 from PyQt6.QtCore import Qt, QSize, QThread, QObject, pyqtSignal, QTimer
 
-# --- Configuration & Gemini Setup ---
-
+#---environment setup---
 GEMINI_API_KEY_VALID = False
 text_model = None
 vision_model = None
@@ -81,6 +81,7 @@ num_variations_for_worker = 1
 
 # --- Stylesheets ---
 
+# Add styling for QTextBrowser if needed (
 DARK_CYBORG_STYLESHEET = """
     /* ... (previous styles including QComboBox) ... */
     QTextBrowser { /* Similar to QTextEdit */
@@ -242,7 +243,7 @@ LIGHT_FUSION_STYLESHEET = """
     }
 """
 
-
+# --- GeminiWorker Class  ---
 class GeminiWorker(QObject):
     result_ready = pyqtSignal(list)
     error_occurred = pyqtSignal(str)
@@ -367,7 +368,7 @@ class GeminiWorker(QObject):
 
 # --- Main Application Class ---
 class PromptCraftAI_Qt(QMainWindow):
-    def __init__(self): 
+    def __init__(self): # (NO CHANGES from Phase 9c)
         super().__init__()
         self.current_theme_name = "Dark Cyborg"
         self.setWindowTitle(f"{APP_NAME} - {APP_VERSION}")
@@ -377,6 +378,9 @@ class PromptCraftAI_Qt(QMainWindow):
         self.video_fields_qt = {}
         self.uploaded_image_pil = None
         self.prompt_library_data = self._load_library()
+        self.prompt_history_log = [] 
+        self.MAX_HISTORY_SIZE = 50  
+
 
         self.gemini_thread = None
         self.gemini_worker = None
@@ -385,7 +389,7 @@ class PromptCraftAI_Qt(QMainWindow):
         self.MAX_VARIATIONS = 10
 
         self._create_menus()
-        self._init_ui() 
+        self._init_ui() # This will now call the updated _create_help_tab
         self.statusBar().showMessage("Ready", 3000)
         self._apply_theme(self.current_theme_name)
 
@@ -431,10 +435,10 @@ class PromptCraftAI_Qt(QMainWindow):
         QTimer.singleShot(3000, lambda: self.statusBar().showMessage("Ready.", 2000))
         for action in self.theme_action_group.actions(): action.setChecked(action.text().startswith(theme_name))
 
-    def _create_header_label(self, text):
+    def _create_header_label(self, text): 
         label = QLabel(text); label.setProperty("isHeader", True); return label
 
-    def _init_ui(self): 
+    def _init_ui(self): # MODIFIED: Add Help Tab
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.main_layout = QVBoxLayout(self.central_widget)
@@ -449,6 +453,7 @@ class PromptCraftAI_Qt(QMainWindow):
         self.video_tab_widget = self._create_video_tab()
         self.image_prompt_tab_widget = self._create_image_prompt_tab()
         self.library_tab_widget = self._create_library_tab()
+        self.history_tab_widget = self._create_history_tab()
         self.help_tab_widget = self._create_help_tab() 
 
         self.tab_widget.addTab(self.basic_tab_widget, "✍️ Basic")
@@ -456,9 +461,10 @@ class PromptCraftAI_Qt(QMainWindow):
         self.tab_widget.addTab(self.video_tab_widget, "🎬 Video Prompt")
         self.tab_widget.addTab(self.image_prompt_tab_widget, "🖼️ Image to Prompt")
         self.tab_widget.addTab(self.library_tab_widget, "📚 Library")
-        self.tab_widget.addTab(self.help_tab_widget, "❓ Help / Guide") #Help Tab
+        self.tab_widget.addTab(self.history_tab_widget, "📜 History") # <--- ADDED HISTORY TAB
+        self.tab_widget.addTab(self.help_tab_widget, "❓ Help / Guide") 
 
-      
+       
         output_group = QWidget()
         output_layout = QVBoxLayout(output_group)
         output_layout.setContentsMargins(0,5,0,0)
@@ -496,8 +502,11 @@ class PromptCraftAI_Qt(QMainWindow):
         self.setStatusBar(QStatusBar(self))
 
 
-
+    # _create_basic_tab, _create_advanced_image_tab, _create_video_tab,
+    # _create_image_prompt_tab, _create_library_tab 
+    # ...
     def _create_basic_tab(self):
+        
         tab_widget = QWidget()
         layout = QVBoxLayout(tab_widget)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -558,6 +567,14 @@ class PromptCraftAI_Qt(QMainWindow):
         generate_btn_layout.addStretch()
         layout.addWidget(generate_btn_container)
         layout.addStretch(1)
+        weighting_info_label = QLabel(
+            "<b>Tip:</b> You can influence term importance in 'Core Idea' or 'Loaded Prompt' "
+            "using syntax like <code>(keyword:1.2)</code> to increase weight, or <code>(keyword:0.8)</code> to decrease. "
+            "Parentheses <code>(word)</code> often increase attention, while square brackets <code>[word]</code> can decrease it."
+        )
+        weighting_info_label.setWordWrap(True)
+        weighting_info_label.setStyleSheet("font-size: 9pt; color: #9da5b4; margin-bottom: 10px; padding: 5px; border: 1px solid #3e4451; border-radius: 3px;")
+        layout.addWidget(weighting_info_label)
         return tab_widget
 
     def _create_advanced_image_tab(self): # Renamed from _create_advanced_tab
@@ -569,6 +586,16 @@ class PromptCraftAI_Qt(QMainWindow):
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(12) 
         layout.addWidget(self._create_header_label("Image Prompt Settings (Advanced)"))
+        
+
+        weighting_info_label = QLabel(
+            "<b>Tip:</b> You can influence term importance directly in text fields using syntax like "
+            "<code>(keyword:1.2)</code> to increase weight, or <code>(keyword:0.8)</code> to decrease. "
+            "Commonly, <code>(word)</code> also increases, <code>[word]</code> decreases."
+        )
+        weighting_info_label.setWordWrap(True)
+        weighting_info_label.setStyleSheet("font-size: 9pt; color: #9da5b4; margin-bottom: 10px; padding: 5px; border: 1px solid #3e4451; border-radius: 3px;")
+        layout.addWidget(weighting_info_label)
 
         adv_form_layout = QFormLayout()
         adv_form_layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapAllRows)
@@ -643,7 +670,7 @@ class PromptCraftAI_Qt(QMainWindow):
         self.adv_img_camera_combo = QComboBox()
         self.adv_img_camera_combo.setEditable(True)
         self.adv_img_camera_combo.setToolTip("Select camera/composition elements or type your own.")
-        camera_presets = [ # Using the extensive list from Phase 9a
+        camera_presets = [ 
             "", "Close-up Shot", "Medium Shot", "Full Shot", "Long Shot", "Extreme Wide Shot", "Establishing Shot",
             "Portrait Orientation", "Landscape Orientation", "Square Aspect Ratio", "Cinematic Aspect Ratio (16:9 or 2.35:1)",
             "Eye-Level Angle", "Low Angle Shot", "High Angle Shot", "Bird's-Eye View", "Worm's-Eye View", "Dutch Angle",
@@ -659,7 +686,7 @@ class PromptCraftAI_Qt(QMainWindow):
         self.adv_img_lighting_combo = QComboBox()
         self.adv_img_lighting_combo.setEditable(True)
         self.adv_img_lighting_combo.setToolTip("Select lighting conditions or type your own.")
-        lighting_presets = [ # Using the extensive list from Phase 9a
+        lighting_presets = [ 
             "", "Natural Light", "Sunlight (Direct)", "Overcast (Diffused Light)", "Cloudy Sky",
             "Golden Hour (Sunrise/Sunset)", "Twilight", "Blue Hour", "Night Scene", "Moonlight", "Starlight",
             "Studio Lighting", "Softbox Lighting", "Ring Light", "Rembrandt Lighting", "Butterfly Lighting", "Split Lighting",
@@ -677,7 +704,7 @@ class PromptCraftAI_Qt(QMainWindow):
         self.adv_img_color_palette_combo = QComboBox()
         self.adv_img_color_palette_combo.setEditable(True)
         self.adv_img_color_palette_combo.setToolTip("Select a color scheme or describe your own.")
-        color_palette_presets = [ # Using the extensive list from Phase 9a
+        color_palette_presets = [ 
             "", "Vibrant Colors", "Saturated Colors", "Muted Colors", "Desaturated Colors", "Pastel Colors", "Neon Colors", "Earthy Tones",
             "Monochromatic", "Monochromatic Blue", "Monochromatic Red", "Monochromatic Green",
             "Analogous Colors", "Complementary Colors", "Split-Complementary Colors", "Triadic Colors", "Tetradic Colors",
@@ -722,12 +749,23 @@ class PromptCraftAI_Qt(QMainWindow):
         layout.addWidget(generate_btn_container)
         scroll_area.setWidget(content_widget)
         return scroll_area
+    
 
+
+    
     def _create_video_tab(self): 
         scroll_area = QScrollArea(); scroll_area.setWidgetResizable(True)
         content_widget = QWidget(); layout = QVBoxLayout(content_widget)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop); layout.setContentsMargins(15,15,15,15); layout.setSpacing(12)
         layout.addWidget(self._create_header_label("Video Prompt Settings"))
+        weighting_info_label = QLabel(
+            "<b>Tip:</b> For text fields below (like Core Concept, Scene, Characters), you can try to influence "
+            "term importance using syntax like <code>(keyword:1.2)</code> to increase weight, "
+            "or <code>(keyword:0.8)</code> to decrease. This also applies if you type custom entries into combo boxes."
+        )
+        weighting_info_label.setWordWrap(True)
+        weighting_info_label.setStyleSheet("font-size: 9pt; color: #9da5b4; margin-bottom: 10px; padding: 5px; border: 1px solid #3e4451; border-radius: 3px;")
+        layout.addWidget(weighting_info_label)
         video_form_layout = QFormLayout()
         video_form_layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapAllRows)
         video_form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
@@ -850,7 +888,178 @@ class PromptCraftAI_Qt(QMainWindow):
         layout.addStretch(1)
         return tab_widget
 
-    def _create_library_tab(self): 
+    def _create_history_tab(self):
+        tab_widget = QWidget()
+        main_layout = QHBoxLayout(tab_widget) # Use QHBoxLayout for list and detail side-by-side
+        main_layout.setContentsMargins(15, 15, 15, 15)
+        main_layout.setSpacing(10)
+
+        # Left side: List of history items
+        list_container = QWidget()
+        list_layout = QVBoxLayout(list_container)
+        list_layout.addWidget(self._create_header_label("Generation History"))
+
+        self.history_list_widget = QListWidget()
+        self.history_list_widget.setAlternatingRowColors(True)
+        self.history_list_widget.setToolTip("Recently generated prompts. Select to view details.")
+        self.history_list_widget.currentItemChanged.connect(self._display_selected_history_prompt) # Display on selection change
+        list_layout.addWidget(self.history_list_widget)
+
+        history_buttons_layout = QHBoxLayout()
+        clear_history_btn = QPushButton("🗑️ Clear History")
+        clear_history_btn.setToolTip("Clear all entries from the history log.")
+        clear_history_btn.setProperty("cssClass", "danger")
+        clear_history_btn.clicked.connect(self._clear_history_log)
+        history_buttons_layout.addStretch()
+        history_buttons_layout.addWidget(clear_history_btn)
+        list_layout.addLayout(history_buttons_layout)
+
+        main_layout.addWidget(list_container, 1) # Give list a stretch factor of 1
+
+        # Right side: Detail view of selected history item
+        detail_container = QWidget()
+        detail_layout = QVBoxLayout(detail_container)
+        detail_layout.addWidget(self._create_header_label("Selected Prompt Details"))
+
+        self.history_detail_text_edit = QTextEdit()
+        self.history_detail_text_edit.setReadOnly(True)
+        self.history_detail_text_edit.setToolTip("Full generated prompt from the selected history item.")
+        detail_layout.addWidget(self.history_detail_text_edit)
+
+        history_detail_buttons_layout = QHBoxLayout()
+        copy_history_btn = QPushButton("📋 Copy Prompt")
+        copy_history_btn.setToolTip("Copy the full text of the selected historical prompt.")
+        copy_history_btn.clicked.connect(self._copy_selected_history_prompt)
+        history_detail_buttons_layout.addWidget(copy_history_btn)
+
+        load_history_btn = QPushButton("📂 Load to Active Tab")
+        load_history_btn.setToolTip("Load this historical prompt into the 'Load Existing' field of the active generation tab.")
+        load_history_btn.setProperty("cssClass", "info")
+        load_history_btn.clicked.connect(self._load_selected_history_to_active_tab)
+        history_detail_buttons_layout.addWidget(load_history_btn)
+        history_detail_buttons_layout.addStretch()
+        detail_layout.addLayout(history_detail_buttons_layout)
+
+        main_layout.addWidget(detail_container, 2) # Give detail view a stretch factor of 2
+
+        self._refresh_history_list_widget() # Initial population if any history exists (won't for now)
+        return tab_widget
+    
+    def _add_to_history(self, operation_type, request_details, generated_prompt):
+        """Adds a new entry to the prompt history log."""
+        if not generated_prompt or "API Error" in generated_prompt : # Don't log errors or empty
+            return
+
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        history_entry = {
+            "timestamp": timestamp,
+            "type": operation_type,
+            # "request_details": request_details, # Storing full request can be verbose
+            "generated_prompt": generated_prompt
+        }
+        self.prompt_history_log.insert(0, history_entry) # Add to the beginning (most recent first)
+
+        # Limit history size
+        if len(self.prompt_history_log) > self.MAX_HISTORY_SIZE:
+            self.prompt_history_log = self.prompt_history_log[:self.MAX_HISTORY_SIZE]
+
+        self._refresh_history_list_widget()
+
+    def _refresh_history_list_widget(self):
+        """Updates the QListWidget in the History tab."""
+        if not hasattr(self, 'history_list_widget'): return # If UI not ready
+
+        self.history_list_widget.clear()
+        for entry in self.prompt_history_log:
+            # Display: Timestamp - Type - First ~50 chars of prompt
+            preview_text = entry["generated_prompt"].split('\n')[0][:50] # First line, first 50 chars
+            if len(entry["generated_prompt"]) > 50 or '\n' in entry["generated_prompt"]:
+                preview_text += "..."
+            display_text = f"{entry['timestamp']} [{entry['type']}] - {preview_text}"
+            list_item = QListWidgetItem(display_text)
+            list_item.setData(Qt.ItemDataRole.UserRole, entry) # Store full entry data
+            self.history_list_widget.addItem(list_item)
+
+    def _display_selected_history_prompt(self, current_item: QListWidgetItem, previous_item: QListWidgetItem):
+        """Displays the full prompt of the selected history item."""
+        if not hasattr(self, 'history_detail_text_edit'): return
+        if current_item:
+            entry_data = current_item.data(Qt.ItemDataRole.UserRole)
+            if entry_data and "generated_prompt" in entry_data:
+                self.history_detail_text_edit.setPlainText(entry_data["generated_prompt"])
+            else:
+                self.history_detail_text_edit.clear()
+        else:
+            self.history_detail_text_edit.clear()
+
+    def _copy_selected_history_prompt(self):
+        """Copies the prompt from the history detail view."""
+        prompt_text = self.history_detail_text_edit.toPlainText().strip()
+        if prompt_text:
+            QGuiApplication.clipboard().setText(prompt_text)
+            QMessageBox.information(self, "History Prompt Copied", "Selected historical prompt copied to clipboard.")
+            self.statusBar().showMessage("History prompt copied.", 3000)
+            QTimer.singleShot(3000, lambda: self.statusBar().showMessage("Ready.", 2000))
+        else:
+            QMessageBox.warning(self, "No Prompt Selected", "No prompt details are currently displayed from history.")
+
+    def _load_selected_history_to_active_tab(self):
+        """Loads the selected historical prompt to the active generation tab."""
+        current_history_item = self.history_list_widget.currentItem()
+        if not current_history_item:
+            QMessageBox.warning(self, "No History Item Selected", "Please select an item from the history list.")
+            return
+
+        entry_data = current_history_item.data(Qt.ItemDataRole.UserRole)
+        if not entry_data or "generated_prompt" not in entry_data:
+            QMessageBox.warning(self, "Invalid History Data", "Selected history item has no prompt data.")
+            return
+
+        prompt_to_load = entry_data["generated_prompt"]
+        # Re-use the library loading logic, but just pass the text
+        # This is a simplified load; it won't try to parse into fields, just loads into "Load Existing".
+        current_tab_widget = self.tab_widget.currentWidget()
+        loaded_message = f"Historical prompt loaded."
+        loaded_into_field = False
+
+        if current_tab_widget == self.basic_tab_widget:
+            self.basic_load_text.setPlainText(prompt_to_load); loaded_into_field = True
+            loaded_message += " into Basic tab."
+        elif current_tab_widget == self.advanced_img_tab_widget:
+            self.adv_img_load_text.setPlainText(prompt_to_load); loaded_into_field = True
+            loaded_message += " into Image Prompt (Advanced) tab."
+        elif current_tab_widget == self.video_tab_widget:
+            self.video_load_text.setPlainText(prompt_to_load); loaded_into_field = True
+            loaded_message += " into Video tab."
+
+        self._display_output(f"--- Loaded from History ({entry_data['timestamp']}) ---\n\n{prompt_to_load}") # Update main output too
+        if loaded_into_field:
+            QMessageBox.information(self, "Loaded from History", loaded_message)
+        else:
+            QMessageBox.information(self, "Loaded from History", f"Historical prompt loaded to main output area (current tab has no 'Load Existing' field).")
+        self.statusBar().showMessage("Loaded from history.", 4000)
+        QTimer.singleShot(4000, lambda: self.statusBar().showMessage("Ready.", 2000))
+
+
+    def _clear_history_log(self):
+        """Clears the entire prompt history log."""
+        if not self.prompt_history_log:
+            QMessageBox.information(self, "History Empty", "The generation history is already empty.")
+            return
+
+        reply = QMessageBox.question(self, "Clear History",
+                                     "Are you sure you want to clear the entire generation history? This action cannot be undone.",
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                     QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
+            self.prompt_history_log.clear()
+            self._refresh_history_list_widget()
+            self.history_detail_text_edit.clear() # Clear detail view as well
+            QMessageBox.information(self, "History Cleared", "Generation history has been cleared.")
+            self.statusBar().showMessage("History cleared.", 3000)
+            QTimer.singleShot(3000, lambda: self.statusBar().showMessage("Ready.", 2000))
+
+    def _create_library_tab(self): # (NO CHANGES from Phase 8)
         tab_widget = QWidget(); main_layout = QVBoxLayout(tab_widget)
         main_layout.setAlignment(Qt.AlignmentFlag.AlignTop); main_layout.setContentsMargins(15,15,15,15); main_layout.setSpacing(10)
         main_layout.addWidget(self._create_header_label("Prompt Library"))
@@ -874,7 +1083,7 @@ class PromptCraftAI_Qt(QMainWindow):
         main_layout.addWidget(buttons_container)
         return tab_widget
 
-    # +++ Help Tab +++
+    # +++ NEW METHOD for Phase 10: Help Tab +++
     def _create_help_tab(self):
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
@@ -1073,7 +1282,7 @@ class PromptCraftAI_Qt(QMainWindow):
             self.basic_batch_count += 1
             self._update_basic_variation_display()
 
-    # Library Methods (_load_library to closeEvent )
+   
     def _load_library(self):
         if os.path.exists(LIBRARY_FILE):
             try:
@@ -1147,6 +1356,8 @@ class PromptCraftAI_Qt(QMainWindow):
             self._refresh_library_list_widget(); self._save_library()
             QMessageBox.information(self, "Deleted", f"'{p_name}' deleted."); self.statusBar().showMessage(f"Deleted '{p_name}'.", 3000)
             QTimer.singleShot(3000, lambda: self.statusBar().showMessage("Ready.", 2000))
+
+
 
     def closeEvent(self, event):
         self._save_library()
@@ -1321,43 +1532,71 @@ class PromptCraftAI_Qt(QMainWindow):
             self.statusBar().showMessage("Generation finished: No results.", 4000)
             QTimer.singleShot(4000, lambda: self.statusBar().showMessage("Ready.", 2000))
             return
-        current_op_message_base = "Generation"
 
-        if num_variations_for_worker > 1:
-            output_parts = []; has_errors_in_batch = False
+        # Determine operation type from the worker context (passed during _trigger_gemini_operation)
+        # This assumes self.gemini_worker is still valid when this slot is called.
+        operation_context = "Unknown Operation"
+        original_query_for_history = "N/A"
+        if self.gemini_worker: # Check if worker object still exists
+            operation_context = self.gemini_worker.context
+            original_query_for_history = self.gemini_worker.query # Store the original input query
+
+        full_generated_text_for_history = ""
+
+        if num_variations_for_worker > 1: # Batch result from basic tab
+            output_parts = []
+            log_parts_for_history = []
+            has_errors_in_batch = False
             for i, text in enumerate(results):
+                variation_header = f"--- Prompt Variation {i+1} ---"
                 if "API Error" in text or "Operation cancelled" in text:
-                    output_parts.append(f"--- Variation {i+1} FAILED ---\n{text}\n"); has_errors_in_batch = True
-                else: output_parts.append(f"--- Prompt Variation {i+1} ---\n{text}\n")
-            final_output = "\n\n".join(output_parts).strip()
-            self.output_text_edit.setPlainText(final_output)
+                    output_parts.append(f"{variation_header} FAILED\n{text}\n")
+                    log_parts_for_history.append(f"{variation_header} FAILED\n{text}")
+                    has_errors_in_batch = True
+                else:
+                    output_parts.append(f"{variation_header}\n{text}\n")
+                    log_parts_for_history.append(f"{variation_header}\n{text}")
+            final_output_display = "\n\n".join(output_parts).strip()
+            full_generated_text_for_history = "\n\n".join(log_parts_for_history).strip() # For history log
+
+            self.output_text_edit.setPlainText(final_output_display) # Overwrite with all batch results
             if has_errors_in_batch:
                 QMessageBox.warning(self, "Batch Generation Issues", "One or more prompt variations may have failed or were cancelled.")
                 self.statusBar().showMessage("Batch complete with issues.", 5000)
-            else: self.statusBar().showMessage(f"Batch of {num_variations_for_worker} prompts generated successfully.", 5000)
-        else:
+            else:
+                self.statusBar().showMessage(f"Batch of {num_variations_for_worker} prompts generated.", 5000)
+        else: # Single result
             result_text = results[0]
+            full_generated_text_for_history = result_text # For history log
+
             if "API Error" in result_text or "Operation cancelled" in result_text:
                  self.output_text_edit.setPlainText(result_text)
-                 self.statusBar().showMessage("Generation failed or cancelled. Check output.", 5000)
-            else: self._display_output(result_text); self.statusBar().showMessage("Prompt generation successful.", 5000)
+                 self.statusBar().showMessage(f"{operation_context} generation failed or cancelled.", 5000)
+            else:
+                self._display_output(result_text) # display_output now doesn't set status
+                self.statusBar().showMessage(f"{operation_context} generation successful.", 5000)
+
+        # --- NEW: Add to history log ---
+        if not ("API Error" in full_generated_text_for_history or "Operation cancelled" in full_generated_text_for_history):
+            self._add_to_history(operation_context, original_query_for_history, full_generated_text_for_history)
+        # --- END NEW ---
+
         QTimer.singleShot(5000, lambda: self.statusBar().showMessage("Ready.", 2000))
 
-    def _handle_gemini_error(self, error_message: str):
+    def _handle_gemini_error(self, error_message: str): # (NO CHANGE to logic, just status bar)
+        # ... (same as Phase 9b, but ensure QTimer clears to "Ready.")
         self._display_output(f"An error occurred:\n{error_message}")
         QMessageBox.critical(self, "Generation Error", f"An error occurred during generation:\n{error_message}")
         self.statusBar().showMessage(f"Error: {error_message[:60]}...", 7000)
         QTimer.singleShot(7000, lambda: self.statusBar().showMessage("Ready.", 2000))
-
 # --- Run the Application ---
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-
+    
     # Define the path to your icon file
-    icon_path = "icons/promptcraft_logo.png" # Assuming it's in the same directory as the script
-                                      # Or use a relative path like "icons/promptcraft_logo.png"
-                                      # Or an absolute path if necessary
+    icon_path = "icons/promptcraft_logo.png" 
+
 
     if os.path.exists(icon_path):
         app_icon = QIcon(icon_path)
@@ -1365,10 +1604,12 @@ if __name__ == "__main__":
         print(f"Application icon set from: {icon_path}")
     else:
         print(f"Warning: Application icon file not found at '{icon_path}'. Using default system icon.")
- 
+  
 
 
-
+    # Stylesheet will be applied by _apply_theme in __init__ of PromptCraftAI_Qt
+    # If you want a default theme set before the window is even created (though _apply_theme does it early):
+    # app.setStyleSheet(DARK_CYBORG_STYLESHEET) # Example
 
     main_window = PromptCraftAI_Qt()
     main_window.show()
