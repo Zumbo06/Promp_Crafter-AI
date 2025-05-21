@@ -22,8 +22,8 @@ GEMINI_API_KEY_VALID = False
 text_model = None
 vision_model = None
 ERROR_MSG = "Gemini AI not initialized." # Default message
-TEXT_MODEL_NAME_TO_TRY = os.environ.get("GEMINI_TEXT_MODEL_OVERRIDE", "gemini-2.0-flash-thinking-exp-1219")
-VISION_MODEL_NAME_TO_TRY = os.environ.get("GEMINI_VISION_MODEL_OVERRIDE", "gemini-2.0-flash-thinking-exp-1219")
+TEXT_MODEL_NAME_TO_TRY = os.environ.get("GEMINI_TEXT_MODEL_OVERRIDE", "gemini-2.5-flash-preview-04-17")
+VISION_MODEL_NAME_TO_TRY = os.environ.get("GEMINI_VISION_MODEL_OVERRIDE", "gemini-2.5-flash-preview-04-17")
 
 try:
     load_dotenv()
